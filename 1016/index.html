@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2f4ef">
+  <meta name="description" content="選擇任意年、月、日，新增每日待辦事項並追蹤完成狀態。個人專用，資料只存在自己的瀏覽器。">
+  <title>日常簿｜每日待辦行事曆</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f2f4ef;
+      --surface: #ffffff;
+      --ink: #202a24;
+      --muted: #778078;
+      --line: #e6eae4;
+      --green: #315c49;
+      --green-soft: #e7eee8;
+      --coral: #d9785e;
+      --yellow: #e9c878;
+      --shadow: 0 18px 50px rgba(35, 51, 41, .07);
+      font-family: "DM Sans", "Noto Sans TC", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background-color: var(--paper);
+      background-image: radial-gradient(#dce3db 0.7px, transparent 0.7px);
+      background-size: 18px 18px;
+      color: var(--ink);
+    }
+
+    button, input, textarea, select { font: inherit; }
+    button { color: inherit; }
+
+    .topbar {
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 clamp(20px, 6vw, 90px);
+      border-bottom: 1px solid rgba(67, 84, 70, .12);
+      background: rgba(248, 249, 246, .76);
+    }
+
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .brand-mark {
+      width: 31px;
+      height: 31px;
+      position: relative;
+      border: 1.5px solid var(--green);
+      border-radius: 9px;
+      background: var(--surface);
+    }
+    .brand-mark::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: 0;
+      right: 0;
+      border-top: 1.5px solid var(--green);
+    }
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      left: 7px;
+      top: 15px;
+      border-radius: 50%;
+      background: var(--coral);
+      box-shadow: 9px 0 0 var(--green), 0 7px 0 var(--yellow);
+    }
+    .brand-name { font-size: 15px; font-weight: 700; letter-spacing: .02em; }
+    .top-date { color: var(--muted); font-size: 13px; }
+    .privacy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 10px;
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .privacy-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #66a77a; }
+    .topbar-actions { display: flex; align-items: center; gap: 10px; }
+
+    main {
+      width: min(1120px, calc(100% - 40px));
+      margin: 48px auto 64px;
+      animation: arrive .55s ease both;
+    }
+
+    .page-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      margin: 0 0 25px;
+    }
+    .eyebrow {
+      margin: 0 0 7px;
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(27px, 4vw, 38px);
+      line-height: 1.2;
+      letter-spacing: -.035em;
+      font-weight: 600;
+    }
+    .heading-date { color: var(--muted); font-size: 13px; padding-bottom: 5px; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(310px, .85fr);
+      align-items: stretch;
+      gap: 18px;
+    }
+
+    .calendar-panel, .notes-panel {
+      background: var(--surface);
+      border: 1px solid rgba(56, 76, 61, .1);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .calendar-panel { padding: 27px 28px 24px; }
+    .calendar-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 25px;
+    }
+    .month-label { margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -.03em; }
+    .calendar-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); border: 0; }
+    .date-picker-input {
+      width: 137px;
+      min-height: 34px;
+      padding: 0 9px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--ink);
+      font-size: 11px;
+      color-scheme: light;
+    }
+    .date-picker-input:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid rgba(49, 92, 73, .48); outline-offset: 2px; }
+    .month-controls { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; }
+    .icon-button, .today-button {
+      height: 34px;
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background .18s ease, border-color .18s ease, transform .18s ease;
+    }
+    .icon-button { width: 34px; font-size: 22px; line-height: 1; color: #58635a; }
+    .today-button { padding: 0 11px; color: var(--green); font-size: 12px; font-weight: 600; }
+    .icon-button:hover, .today-button:hover { background: var(--green-soft); border-color: #c9d6cb; }
+    .icon-button:active, .today-button:active { transform: scale(.96); }
+
+    .weekday-row, .days-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .weekday-row { margin-bottom: 8px; }
+    .weekday {
+      text-align: center;
+      color: #89928a;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 8px 0;
+    }
+    .day-cell {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-width: 0;
+      aspect-ratio: 1.2 / 1;
+      padding-top: 9px;
+      border: 0;
+      background: transparent;
+      border-radius: 7px;
+      cursor: pointer;
+      color: var(--ink);
+      font-size: 13px;
+      transition: background .16s ease, color .16s ease;
+    }
+    .day-cell:hover:not(.selected) { background: #f3f6f2; }
+    .day-cell.outside { color: #bdc4bd; }
+    .day-cell.today:not(.selected) .day-number {
+      display: grid;
+      width: 28px;
+      height: 28px;
+      place-items: center;
+      margin-top: -6px;
+      border: 1px solid #9aac9d;
+      border-radius: 50%;
+      color: var(--green);
+      font-weight: 700;
+    }
+    .day-cell.selected { background: var(--green); color: white; }
+    .day-number { position: relative; z-index: 1; }
+    .note-mark {
+      position: absolute;
+      bottom: 9px;
+      left: 50%;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--coral);
+      transform: translateX(-50%);
+    }
+    .selected .note-mark { background: #f0c776; }
+    .calendar-footer {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding-top: 17px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .legend-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); }
+
+    .notes-panel { display: flex; flex-direction: column; min-height: 490px; overflow: hidden; }
+    .notes-header { padding: 25px 24px 19px; border-bottom: 1px solid var(--line); }
+    .notes-date { margin: 0 0 4px; font-size: 19px; font-weight: 600; letter-spacing: -.025em; }
+    .notes-subtitle { margin: 0; color: var(--muted); font-size: 12px; }
+    .note-list { display: flex; flex-direction: column; gap: 5px; padding: 12px 15px; }
+    .note-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      padding: 10px 9px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      transition: background .16s ease, border-color .16s ease;
+    }
+    .note-item:hover { background: #f6f8f5; }
+    .note-item.active { background: #f0f4ef; border-color: #dce7dd; }
+    .todo-complete {
+      width: 17px;
+      height: 17px;
+      flex: 0 0 17px;
+      margin: 0 2px 0 0;
+      accent-color: var(--green);
+      cursor: pointer;
+    }
+    .note-item.done .note-item-title { color: var(--muted); text-decoration: line-through; }
+    .note-accent { width: 3px; align-self: stretch; min-height: 25px; border-radius: 3px; background: var(--coral); }
+    .note-accent.work { background: #719a81; }
+    .note-accent.life { background: #d8b55e; }
+    .note-accent.reminder { background: #7e9bb4; }
+    .note-item-text { min-width: 0; flex: 1; }
+    .note-item-title { display: block; overflow: hidden; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .note-item-meta { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .todo-edit {
+      flex: 0 0 auto;
+      padding: 4px 5px;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 10px;
+    }
+    .todo-edit:hover { background: var(--green-soft); color: var(--green); }
+    .empty-notes { padding: 11px 10px 13px; color: #929a92; font-size: 12px; }
+
+    .editor {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px 24px 22px;
+      border-top: 1px solid var(--line);
+    }
+    .editor-top { display: flex; justify-content: space-between; align-items: center; }
+    .editor-label { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .1em; }
+    .category-select {
+      max-width: 100px;
+      padding: 5px 20px 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: white;
+      color: #657067;
+      font-size: 10px;
+    }
+    .title-input, .body-input {
+      width: 100%;
+      border: 0;
+      outline: none;
+      background: transparent;
+      color: var(--ink);
+    }
+    .title-input { padding: 5px 0 8px; border-bottom: 1px solid var(--line); font-size: 15px; font-weight: 600; }
+    .title-input::placeholder, .body-input::placeholder { color: #a7afa7; }
+    .body-input { min-height: 89px; resize: vertical; font-size: 12px; line-height: 1.7; }
+    .editor-actions { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+    .delete-button, .save-button, .new-button {
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      transition: background .18s ease, transform .18s ease;
+    }
+    .delete-button { padding: 8px 0; background: transparent; color: #b26958; }
+    .delete-button:hover { color: #8f4738; }
+    .delete-button[hidden] { display: none; }
+    .save-button, .new-button { min-height: 34px; padding: 0 13px; background: var(--green); color: white; }
+    .save-button:hover, .new-button:hover { background: #244b38; }
+    .new-button { display: flex; align-items: center; gap: 6px; background: transparent; color: var(--green); border: 1px solid #ccd9cf; }
+    .new-button:hover { background: var(--green-soft); }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+      outline: 2px solid #8cab91;
+      outline-offset: 2px;
+    }
+    .toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      padding: 11px 15px;
+      border-radius: 6px;
+      background: var(--ink);
+      color: white;
+      font-size: 12px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @keyframes arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 760px) {
+      .topbar { height: auto; min-height: 64px; padding: 10px 16px; gap: 10px; }
+      .topbar-actions { gap: 8px; }
+      .top-date { font-size: 11px; text-align: right; }
+      .privacy-badge { margin-left: 6px; font-size: 10px; }
+      main { width: min(100% - 28px, 560px); margin: 31px auto 40px; }
+      .page-heading { align-items: flex-start; flex-direction: column; gap: 8px; margin-bottom: 17px; }
+      .heading-date { padding: 0; }
+      .workspace { grid-template-columns: minmax(0, 1fr); gap: 13px; }
+      .calendar-panel { padding: 20px 15px 17px; }
+      .calendar-toolbar { margin-bottom: 17px; }
+      .calendar-toolbar { align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+      .calendar-heading { gap: 8px; }
+      .month-label { font-size: 19px; }
+      .date-picker-input { width: 128px; min-height: 33px; font-size: 11px; }
+      .day-cell { aspect-ratio: 1.05 / 1; padding-top: 7px; font-size: 12px; }
+      .day-cell.today:not(.selected) .day-number { width: 26px; height: 26px; margin-top: -5px; }
+      .note-mark { bottom: 7px; }
+      .notes-panel { min-height: 365px; }
+      .notes-header { padding: 19px 19px 15px; }
+      .editor { padding: 11px 19px 18px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" aria-label="日常簿首頁">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">日常簿</span>
+    </div>
+    <div class="topbar-actions">
+      <div class="top-date" id="topDate"></div>
+      <span class="privacy-badge">僅儲存在此裝置</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">YOUR DAYS, IN ONE PLACE</p>
+        <h1>每日待辦行事曆</h1>
+      </div>
+      <div class="heading-date" id="headingDate"></div>
+    </section>
+
+    <section class="workspace" aria-label="行事曆與筆記">
+      <section class="calendar-panel" aria-label="月曆">
+        <div class="calendar-toolbar">
+          <div class="calendar-heading">
+            <h2 class="month-label" id="monthLabel"></h2>
+            <label class="visually-hidden" for="datePickerInput">選擇年、月、日</label>
+            <input class="date-picker-input" id="datePickerInput" type="date" aria-label="直接選擇年、月、日">
+          </div>
+          <div class="month-controls">
+            <button class="today-button" id="todayButton" type="button">今天</button>
+            <button class="icon-button" id="previousMonth" type="button" aria-label="上一個月" title="上一個月">‹</button>
+            <button class="icon-button" id="nextMonth" type="button" aria-label="下一個月" title="下一個月">›</button>
+          </div>
+        </div>
+        <div class="weekday-row" aria-hidden="true">
+          <span class="weekday">一</span><span class="weekday">二</span><span class="weekday">三</span>
+          <span class="weekday">四</span><span class="weekday">五</span><span class="weekday">六</span><span class="weekday">日</span>
+        </div>
+        <div class="days-grid" id="daysGrid"></div>
+        <div class="calendar-footer"><span class="legend-dot"></span><span>有待辦事項的日期</span></div>
+      </section>
+
+      <section class="notes-panel" aria-label="當日待辦清單">
+        <header class="notes-header">
+          <h2 class="notes-date" id="notesDate"></h2>
+          <p class="notes-subtitle" id="notesSubtitle"></p>
+        </header>
+        <div class="note-list" id="noteList" aria-live="polite"></div>
+        <form class="editor" id="noteForm">
+          <div class="editor-top">
+            <span class="editor-label" id="editorLabel">新增待辦事項</span>
+            <select class="category-select" id="categoryInput" aria-label="待辦分類">
+              <option value="個人">個人</option>
+              <option value="工作">工作</option>
+              <option value="生活">生活</option>
+              <option value="提醒">提醒</option>
+            </select>
+          </div>
+          <input class="title-input" id="titleInput" type="text" maxlength="120" placeholder="新增一件今天要完成的事…" aria-label="待辦事項" required>
+          <textarea class="body-input" id="bodyInput" maxlength="3000" placeholder="補充說明（選填）…" aria-label="待辦事項說明"></textarea>
+          <div class="editor-actions">
+            <button class="delete-button" id="deleteButton" type="button" hidden>刪除待辦</button>
+            <button class="save-button" id="saveNoteButton" type="submit">新增待辦</button>
+          </div>
+        </form>
+      </section>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const storageKey = "daily-notebook-v1";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let selectedDate = new Date(today);
+    let displayedMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    let notes = loadNotes();
+    let editingId = null;
+    let toastTimer;
+
+    const monthLabel = document.querySelector("#monthLabel");
+    const datePickerInput = document.querySelector("#datePickerInput");
+    const daysGrid = document.querySelector("#daysGrid");
+    const notesDate = document.querySelector("#notesDate");
+    const notesSubtitle = document.querySelector("#notesSubtitle");
+    const noteList = document.querySelector("#noteList");
+    const titleInput = document.querySelector("#titleInput");
+    const bodyInput = document.querySelector("#bodyInput");
+    const categoryInput = document.querySelector("#categoryInput");
+    const editorLabel = document.querySelector("#editorLabel");
+    const deleteButton = document.querySelector("#deleteButton");
+    const toast = document.querySelector("#toast");
+
+    function loadNotes() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(storageKey) || "[]");
+        return Array.isArray(stored) ? stored : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function persistNotes(nextNotes) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(nextNotes));
+        notes = nextNotes;
+        return true;
+      } catch {
+        showToast("儲存失敗：請確認瀏覽器允許網站儲存資料");
+        return false;
+      }
+    }
+
+    function dateKey(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatDate(date, options) {
+      return new Intl.DateTimeFormat("zh-TW", options).format(date);
+    }
+
+    function sameDay(left, right) {
+      return dateKey(left) === dateKey(right);
+    }
+
+    function renderCalendar() {
+      monthLabel.textContent = formatDate(displayedMonth, { year: "numeric", month: "long" });
+      datePickerInput.value = dateKey(selectedDate);
+      daysGrid.replaceChildren();
+      const firstOfMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth(), 1);
+      const mondayOffset = (firstOfMonth.getDay() + 6) % 7;
+      const gridStart = new Date(firstOfMonth);
+      gridStart.setDate(firstOfMonth.getDate() - mondayOffset);
+
+      for (let index = 0; index < 42; index += 1) {
+        const date = new Date(gridStart);
+        date.setDate(gridStart.getDate() + index);
+        const key = dateKey(date);
+        const dayNotes = notes.some((note) => note.date === key);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "day-cell";
+        button.setAttribute("aria-label", `${formatDate(date, { year: "numeric", month: "long", day: "numeric" })}${dayNotes ? "，有筆記" : ""}`);
+        button.setAttribute("aria-pressed", String(sameDay(date, selectedDate)));
+        if (date.getMonth() !== displayedMonth.getMonth()) button.classList.add("outside");
+        if (sameDay(date, today)) button.classList.add("today");
+        if (sameDay(date, selectedDate)) button.classList.add("selected");
+
+        const number = document.createElement("span");
+        number.className = "day-number";
+        number.textContent = String(date.getDate());
+        button.append(number);
+        if (dayNotes) {
+          const mark = document.createElement("span");
+          mark.className = "note-mark";
+          mark.setAttribute("aria-hidden", "true");
+          button.append(mark);
+        }
+        button.addEventListener("click", () => selectDate(date));
+        daysGrid.append(button);
+      }
+    }
+
+    function renderNotes() {
+      const dayKey = dateKey(selectedDate);
+      const dayNotes = notes.filter((note) => note.date === dayKey)
+        .sort((left, right) => (left.createdAt || 0) - (right.createdAt || 0));
+      notesDate.textContent = formatDate(selectedDate, { month: "long", day: "numeric", weekday: "long" });
+      const completedCount = dayNotes.filter((note) => note.completed).length;
+      notesSubtitle.textContent = dayNotes.length
+        ? `共 ${dayNotes.length} 件待辦・已完成 ${completedCount} 件`
+        : "挑個日期，寫下這一天要完成的事";
+      noteList.replaceChildren();
+
+      if (!dayNotes.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty-notes";
+        empty.textContent = "這天還沒有待辦事項。";
+        noteList.append(empty);
+      } else {
+        dayNotes.forEach((note) => {
+          const item = document.createElement("div");
+          item.className = `note-item${note.id === editingId ? " active" : ""}${note.completed ? " done" : ""}`;
+          const complete = document.createElement("input");
+          complete.type = "checkbox";
+          complete.className = "todo-complete";
+          complete.checked = Boolean(note.completed);
+          complete.setAttribute("aria-label", `${note.completed ? "標記未完成" : "完成待辦」："}${note.title}`);
+          complete.addEventListener("change", () => toggleTodo(note.id));
+
+          const accent = document.createElement("span");
+          accent.className = `note-accent ${categoryClass(note.category)}`;
+          const text = document.createElement("span");
+          text.className = "note-item-text";
+          const title = document.createElement("span");
+          title.className = "note-item-title";
+          title.textContent = note.title || "未命名事項";
+          const meta = document.createElement("span");
+          meta.className = "note-item-meta";
+          meta.textContent = note.category || "個人";
+          text.append(title, meta);
+
+          const edit = document.createElement("button");
+          edit.type = "button";
+          edit.className = "todo-edit";
+          edit.textContent = "編輯";
+          edit.setAttribute("aria-label", `編輯待辦：${note.title || "未命名事項"}`);
+          edit.addEventListener("click", () => loadNoteIntoEditor(note));
+          item.append(complete, accent, text, edit);
+          noteList.append(item);
+        });
+      }
+      renderCalendar();
+    }
+
+    function categoryClass(category) {
+      return ({ 工作: "work", 生活: "life", 提醒: "reminder", 個人: "" })[category] || "";
+    }
+
+    function resetEditor() {
+      editingId = null;
+      titleInput.value = "";
+      bodyInput.value = "";
+      categoryInput.value = "個人";
+      editorLabel.textContent = "新增待辦事項";
+      document.querySelector("#saveNoteButton").textContent = "新增待辦";
+      deleteButton.hidden = true;
+    }
+
+    function loadNoteIntoEditor(note) {
+      editingId = note.id;
+      titleInput.value = note.title || "";
+      bodyInput.value = note.body || "";
+      categoryInput.value = note.category || "個人";
+      editorLabel.textContent = "編輯待辦";
+      document.querySelector("#saveNoteButton").textContent = "儲存修改";
+      deleteButton.hidden = false;
+      renderNotes();
+    }
+
+    function toggleTodo(id) {
+      const updatedNotes = notes.map((note) => note.id === id
+        ? { ...note, completed: !note.completed }
+        : note);
+      if (persistNotes(updatedNotes)) renderNotes();
+    }
+
+    function selectDate(date) {
+      selectedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      displayedMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+      resetEditor();
+      renderCalendar();
+      renderNotes();
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 1900);
+    }
+
+    document.querySelector("#previousMonth").addEventListener("click", () => {
+      displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() - 1, 1);
+      renderCalendar();
+    });
+    document.querySelector("#nextMonth").addEventListener("click", () => {
+      displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + 1, 1);
+      renderCalendar();
+    });
+    document.querySelector("#todayButton").addEventListener("click", () => selectDate(today));
+    datePickerInput.addEventListener("change", () => {
+      if (!datePickerInput.value) return;
+      const [year, month, day] = datePickerInput.value.split("-").map(Number);
+      selectDate(new Date(year, month - 1, day));
+    });
+    document.querySelector("#noteForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const title = titleInput.value.trim();
+      const body = bodyInput.value.trim();
+      if (!title) {
+        titleInput.focus();
+        showToast("請輸入待辦事項內容");
+        return;
+      }
+      if (editingId) {
+        const note = notes.find((item) => item.id === editingId);
+        if (note) {
+          const updatedNotes = notes.map((item) => item.id === editingId
+            ? { ...item, title, body, category: categoryInput.value }
+            : item);
+          if (!persistNotes(updatedNotes)) return;
+        }
+      } else {
+        const note = {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          date: dateKey(selectedDate),
+          title,
+          body,
+          category: categoryInput.value,
+          completed: false,
+          createdAt: Date.now()
+        };
+        const updatedNotes = [...notes, note];
+        if (!persistNotes(updatedNotes)) return;
+        editingId = note.id;
+      }
+      resetEditor();
+      renderNotes();
+      titleInput.focus();
+      showToast("待辦事項已儲存，可以繼續新增");
+    });
+
+    deleteButton.addEventListener("click", () => {
+      if (!editingId) return;
+      const updatedNotes = notes.filter((note) => note.id !== editingId);
+      if (!persistNotes(updatedNotes)) return;
+      resetEditor();
+      renderNotes();
+      showToast("待辦事項已刪除");
+    });
+
+    document.querySelector("#topDate").textContent = formatDate(today, { year: "numeric", month: "long", day: "numeric", weekday: "short" });
+    document.querySelector("#headingDate").textContent = formatDate(today, { year: "numeric", month: "long", day: "numeric", weekday: "long" });
+    resetEditor();
+    renderNotes();
+  </script>
+</body>
+</html>
